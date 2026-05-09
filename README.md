@@ -5,24 +5,24 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status: Active](https://img.shields.io/badge/Status-Active-brightgreen.svg)]()
 
-> **Pipeline de análisis premarket para 17 tickers de alto volumen. Calcula BP, targets INT/MAX, BB flags, señales 3/9 y dirección al open — todo en 3 snapshots: 9:15, 9:28 y 9:30 ET.**
+> **Premarket analysis pipeline for 17 high-volume tickers. Calculates BP, INT/MAX targets, BB flags, 3/9 signals and open direction — across 3 time snapshots: 9:15, 9:28 and 9:30 ET.**
 
 ---
 
-## 🌟 ¿Qué hace?
+## 🌟 What It Does
 
-- **3 modos cronológicos** — snapshot completo en cada momento clave antes y durante el open
-- **BB Flags por TF** — detecta BBT/BBB en 1m/5m/15m/30m/1h/1d usando BB(20,2) EWM de cierres del día anterior
-- **BB Shift al open** — compara flags premarket vs flags reales a las 9:30 (`igual / escalo / desaparecio / nuevo / cambio_tipo`)
-- **Dirección automática** — `ALCISTA / BAJISTA / ZONA_MUERTA` basada en open vs BP (umbral ±$0.25)
-- **Targets precisos** — INT = BP ± (range_3d × 0.33) | MAX = BP ± (range_3d × 0.66)
-- **3 outputs por modo** — JSON estructurado + context comprimido para AI + dashboard de análisis
+- **3 chronological modes** — complete snapshot at each key moment before and during market open
+- **BB Flags per timeframe** — detects BBT/BBB across 1m/5m/15m/30m/1h/1d using BB(20,2) EWM of previous day closes
+- **BB Shift at open** — compares premarket flags vs real 9:30 flags (`equal / escalated / disappeared / new / type_change`)
+- **Automatic direction** — `BULLISH / BEARISH / DEAD_ZONE` based on open vs BP (±$0.25 threshold)
+- **Precise targets** — INT = BP ± (range_3d × 0.33) | MAX = BP ± (range_3d × 0.66)
+- **3 outputs per mode** — structured JSON + AI-ready compressed context + analysis dashboard
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Clonar e instalar
+### 1. Clone & Install
 
 ```bash
 git clone https://github.com/RamsesAguirre777/bb-premarket.git
@@ -30,11 +30,11 @@ cd bb-premarket
 pip install -r requirements.txt
 ```
 
-### 2. Configurar credenciales
+### 2. Configure Credentials
 
 ```bash
 cp .env.example .env
-# Editar .env con tus API keys de Alpaca
+# Edit .env with your Alpaca API keys
 ```
 
 ```env
@@ -42,46 +42,46 @@ ALPACA_API_KEY=your_key_here
 ALPACA_SECRET_KEY=your_secret_here
 ```
 
-### 3. Correr
+### 3. Run
 
 ```bash
-# Todos los tickers — cada modo en su ventana horaria
+# All tickers — run each mode in its time window
 python -m dc.main premarket_9_15   # ~9:15 AM ET
 python -m dc.main premarket_9_28   # ~9:28 AM ET
 python -m dc.main open_930         # ~9:30 AM ET
 
-# Ticker individual
+# Single ticker
 python -m dc.main open_930 --ticker NVDA
 
-# Fecha específica (para replay)
+# Specific date (for replay)
 python -m dc.main premarket_9_28 --date 2026-05-08
 ```
 
 ---
 
-## 🛠️ Los 3 Modos
+## 🛠️ The 3 Modes
 
-### 📊 `premarket_9_15` — Primera foto del día
+### 📊 `premarket_9_15` — First snapshot of the day
 
-Snapshot inicial a las 9:15 AM ET. Establece el BP base y los primeros targets con los datos que hay disponibles.
+Initial snapshot at 9:15 AM ET. Establishes the base BP and first targets with the data available at that time.
 
 ```bash
 python -m dc.main premarket_9_15
 # Output: outputs/premarket_9_15_YYYY-MM-DD.json
 ```
 
-### 📊 `premarket_9_28` — Foto definitiva pre-open
+### 📊 `premarket_9_28` — Final pre-open snapshot
 
-Snapshot final antes del open. Refina BP con más velas disponibles, recalcula targets y señales. **Este es el modo más importante** — es la base que usa `open_930`.
+Last snapshot before market open. Refines BP with more candles available, recalculates targets and signals. **This is the most important mode** — it serves as the base for `open_930`.
 
 ```bash
 python -m dc.main premarket_9_28
 # Output: outputs/premarket_9_28_YYYY-MM-DD.json
 ```
 
-### 🔔 `open_930` — Al abrir el mercado
+### 🔔 `open_930` — At market open
 
-Lee el precio de apertura real vía Alpaca snapshot, determina dirección vs BP, calcula `bb_flags_real_930` comparando con los flags premarket, y genera `bb_shift`.
+Reads the real open price via Alpaca snapshot, determines direction vs BP, computes `bb_flags_real_930` by comparing against premarket flags, and generates `bb_shift`.
 
 ```bash
 python -m dc.main open_930
@@ -90,48 +90,48 @@ python -m dc.main open_930
 
 ---
 
-## 🎯 Conceptos Clave
+## 🎯 Key Concepts
 
 ### Break Point (BP)
-Promedio de EMA3 y EMA9 calculado sobre todos los timeframes disponibles, congelado al cutoff de cada modo.
+Average of EMA3 and EMA9 computed across all available timeframes, frozen at each mode's cutoff time.
 
 ```
 bp = avg(ema3_all_tfs + ema9_all_tfs)
 ```
 
 ### BB Flags
-Detecta si el precio está fuera de las Bandas de Bollinger (20 períodos, 2σ, EWM) calculadas con los cierres del día anterior hasta las 16:00 ET.
+Detects whether price is outside the Bollinger Bands (20 periods, 2σ, EWM) calculated from the previous day's closes up to 16:00 ET.
 
 ```
-BBT {TF}  →  precio > banda superior
-BBB {TF}  →  precio < banda inferior
+BBT {TF}  →  price > upper band
+BBB {TF}  →  price < lower band
 ```
 
-Ejemplo: `BBT 1M BBT 5M BBB 1H` → precio en zona de sobrecompra en 1m/5m y sobreventa en 1h.
+Example: `BBT 1M BBT 5M BBB 1H` → price in overbought zone on 1m/5m and oversold on 1h.
 
 ### BB Shift
-Compara los flags del premarket contra los flags reales al abrir a las 9:30.
+Compares premarket flags against the real flags at the 9:30 open.
 
-| Valor | Significado |
+| Value | Meaning |
 |---|---|
-| `igual` | Mismos flags — sin cambio |
-| `escalo` | Más flags al open — señal amplificada |
-| `desaparecio` | Menos flags — presión liberada |
-| `nuevo` | Sin flags en PM → flags al open |
-| `cambio_tipo` | Mismo TF pero BBT↔BBB invertido |
+| `igual` | Same flags — no change |
+| `escalo` | More flags at open — amplified signal |
+| `desaparecio` | Fewer flags — pressure released |
+| `nuevo` | No flags in PM → flags appear at open |
+| `cambio_tipo` | Same TF but BBT↔BBB flipped |
 
-### Dirección
+### Direction
 
 ```
-open > BP + $0.25  →  ALCISTA
-open < BP - $0.25  →  BAJISTA
-|open - BP| ≤ $0.25  →  ZONA_MUERTA
+open > BP + $0.25  →  BULLISH
+open < BP - $0.25  →  BEARISH
+|open - BP| ≤ $0.25  →  DEAD ZONE
 ```
 
 ### Targets
 
 ```
-range_3d  →  BB(20,2) EWM width en 1H pre-cutoff (fallback: avg H-L últimos 3 días)
+range_3d  →  BB(20,2) EWM width on 1H pre-cutoff (fallback: avg H-L of last 3 daily bars)
 INT_POS   =  BP + (range_3d × 0.33)
 INT_NEG   =  BP - (range_3d × 0.33)
 MAX_POS   =  BP + (range_3d × 0.66)
@@ -142,15 +142,15 @@ MAX_NEG   =  BP - (range_3d × 0.66)
 
 ## 📁 Outputs
 
-Cada modo genera 3 archivos en `outputs/`:
+Each mode writes 3 files to `outputs/`:
 
-| Archivo | Uso |
+| File | Use |
 |---|---|
-| `{modo}_YYYY-MM-DD.json` | Datos completos estructurados — útil para scripts y backtesting |
-| `context_compressed_YYYY-MM-DD_{modo}.txt` | Resumen comprimido para pegar como contexto a un AI |
-| `ai_dashboard_prompt_YYYY-MM-DD_{modo}.txt` | Dashboard narrativo para análisis por AI (Claude, GPT, etc.) |
+| `{mode}_YYYY-MM-DD.json` | Full structured data — useful for scripts and backtesting |
+| `context_compressed_YYYY-MM-DD_{mode}.txt` | Compressed summary to paste as AI context |
+| `ai_dashboard_prompt_YYYY-MM-DD_{mode}.txt` | Narrative dashboard for AI analysis (Claude, GPT, etc.) |
 
-### Ejemplo de datos por ticker (`premarket_9_28`)
+### Sample ticker data (`premarket_9_28`)
 
 ```json
 {
@@ -180,24 +180,24 @@ Cada modo genera 3 archivos en `outputs/`:
 
 ## 📋 Tickers
 
-17 tickers cubiertos organizados por familia:
+17 tickers organized by market family:
 
-| Familia | Tickers |
+| Family | Tickers |
 |---|---|
-| **ETFs Índices** | QQQ · SPY · IWM · DIA |
-| **Refugio** | TLT · GLD |
-| **Semis** | NVDA · AMD · AVGO |
-| **Mega-tech** | META · MSFT · GOOGL · AMZN · AAPL |
+| **Index ETFs** | QQQ · SPY · IWM · DIA |
+| **Safe Haven** | TLT · GLD |
+| **Semiconductors** | NVDA · AMD · AVGO |
+| **Mega-cap Tech** | META · MSFT · GOOGL · AMZN · AAPL |
 | **Momentum** | TSLA · COIN · PLTR |
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Architecture
 
 ```
 bb-premarket/
 ├── dc/
-│   ├── constants.py        — tickers, familias, TIER1/TIER2, timezone
+│   ├── constants.py        — tickers, families, TIER1/TIER2, timezone
 │   ├── data_clients.py     — AlpacaHistoricalClient · AlpacaSnapshotClient
 │   │                         BPCalculator · TargetsCalculator · SkipFilter
 │   ├── indicators.py       — compute_bb_flags · compute_signals_3_9
@@ -211,31 +211,31 @@ bb-premarket/
 │   │                         write_ai_dashboard
 │   ├── main.py             — CLI entry point
 │   └── modes/
-│       ├── mode_9_15.py    — snapshot 9:15 ET
-│       ├── mode_9_28.py    — snapshot 9:28 ET (base para open_930)
-│       └── mode_930.py     — open real: bb_flags_real_930 + bb_shift
-│                             (incluye _rth_mask_vectorized, _build_tfs_rth,
-│                              _compute_caution_real_930 reimplementados)
-└── outputs/                — generado automáticamente (en .gitignore)
+│       ├── mode_9_15.py    — 9:15 ET snapshot
+│       ├── mode_9_28.py    — 9:28 ET snapshot (base for open_930)
+│       └── mode_930.py     — real open: bb_flags_real_930 + bb_shift
+│                             (includes _rth_mask_vectorized, _build_tfs_rth,
+│                              _compute_caution_real_930 reimplemented)
+└── outputs/                — auto-generated (gitignored)
 ```
 
 ---
 
-## 🔒 Seguridad
+## 🔒 Security
 
-- **Sin datos persistentes** — todo se procesa en tiempo real desde Alpaca
-- **API keys solo en `.env`** — nunca en el código
-- **outputs/ en `.gitignore`** — tus datos de trading no se suben al repo
+- **No persistent data** — everything processed in real-time from Alpaca
+- **API keys in `.env` only** — never hardcoded
+- **`outputs/` in `.gitignore`** — your trading data stays local
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-MIT — libre para usar, modificar y distribuir.
+MIT — free to use, modify and distribute.
 
 ---
 
 <div align="center">
-  <p>Construido para traders que necesitan señales claras antes del open.</p>
+  <p>Built for traders who need clear signals before the open.</p>
   <a href="https://github.com/RamsesAguirre777">GitHub</a>
 </div>
