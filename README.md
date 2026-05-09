@@ -221,14 +221,6 @@ bb-premarket/
 
 ---
 
-## 🔒 Security
-
-- **No persistent data** — everything processed in real-time from Alpaca
-- **API keys in `.env` only** — never hardcoded
-- **`outputs/` in `.gitignore`** — your trading data stays local
-
----
-
 ## 📄 License
 
 MIT — free to use, modify and distribute.
